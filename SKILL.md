@@ -504,6 +504,23 @@ Wait for human to explicitly confirm YES before proceeding.
 
 ### Step 3: Create Booking Session
 
+#### Pre-Validation (MANDATORY)
+
+Before calling the API, validate:
+
+| Check | Validation | If Failed |
+|-------|------------|-----------|
+| API key present | `echo $DRUKASIA_API_KEY` returns value | Prompt: "Authentication required. Please provide your API key." |
+| `itinerary_id` valid | Integer from search results | Prompt: "Please select a valid tour from the search results." |
+| `tour_date_id` valid | String from tour's available dates | Prompt: "Please select a valid tour date." |
+| `total_adults` matches session | Must equal stored travelers.adults | Use session value |
+| `total_children` matches session | Must equal stored travelers.children | Use session value |
+| `total_infants` matches session | Must equal stored travelers.infants | Use session value |
+
+**If any validation fails, do NOT call the API. Prompt human for correct values first.**
+
+#### API Call
+
 ```bash
 curl --request POST \
   --url ${API_BASE_URL}/tours/bookings \
