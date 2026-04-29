@@ -1,6 +1,6 @@
 ---
 name: bhutan-travel
-description: This skill helps users to search Bhutan travel packages, tours, hotels, and flights provided by Druk Asia. Use this skill when users want to plan a trip to Bhutan, booking trips to Bhutan or ask about travel to Bhutan.
+description: This skill helps users to search Bhutan travel packages, tours, and flights. Use this skill when users want to plan a trip to Bhutan, booking trips to Bhutan or ask about travel to Bhutan.
 license: Apache-2.0
 metadata:
   author: drukasia
@@ -13,9 +13,8 @@ metadata:
         - DRUKASIA_API_KEY
 ---
 API_BASE_URL=https://drukasia-app-api.vercel.app/api
-SESSION_TIMEOUT=1440
 
-## Authentication Flow (MANDATORY - Only for Booking)
+## Authentication Flow
 
 > **IMPORTANT: Authentication is ONLY required when human wants to BOOK a tour or flight.**
 > 
@@ -275,12 +274,10 @@ Agent: [Queries tours with adults=2, number_of_days=7]
 
 ## Tour Packages
 
-### Step 1: Collect Preferences (First)
+### Step 1: Collect Preferences (Combined Question)
 
 Ask human:
-- Number of travelers (adults, children, infants)
-- Preferred tour length (number of days)
-- Travel dates
+> "How many travelers (adults, children, infants), what dates (YYYY-MM-DD), and how many days for your tour?"
 
 ### Step 2: Validate Input
 
@@ -343,9 +340,9 @@ Present tours with:
 - Price per person and total
 - Brief itinerary summary each day with activities
 
-### Step 5: Confirm Selection
+### Step 5: User Selection
 
-Ask: "Which tour would you like? and which date?"
+When human selects a tour and date, move directly to next step (no extra confirmation).
 
 ### Error Handling
 
@@ -464,9 +461,9 @@ Present flights with:
 - **TOTAL price (calculate correctly)**
 - Seat availability
 
-### Step 5: Confirm Selection
+### Step 5: User Selection
 
-Ask: "Which outbound and return flights?"
+When human selects flights, move directly to next step (no extra confirmation).
 
 ### Error Handling
 
@@ -563,78 +560,27 @@ curl --request POST \
 
 ### Step 4: Ask Human Payment Method
 
-Ask human to choose payment method:
-
+Ask human to choose:
 > "How would you like to pay?"
-> 1. **Auto-fill** - I'll enter your credit card details automatically
-> 2. **Payment link** - I'll send you a link to enter your card details
+> 1. **Auto-fill** - Enter card details now
+> 2. **Payment link** - Receive link to pay later
 
 Wait for human to choose 1 or 2.
 
-### Step 5: Process Payment Based on Choice
+### Step 5: Process Payment
 
 **If human chooses 1 (Auto-fill):**
-- Check memory for saved credit card details
-- If card details exist in memory:
-  - Use saved card details
-  - Confirm with human: "I'll use your saved card ending in [last-4-digits]. OK?"
-- If no saved card:
-  - Ask for credit card details:
-    > "Please provide your card details:"
-    > - Card number
-    > - Expiry month (MM)
-    > - Expiry year (YYYY)
-    > - CVC
-    > - Cardholder name
-- Collect all details from human (if needed)
-- Store card details in memory for future use
-- Call `/api/payments` to process payment:
-```bash
-curl --request POST \
-  --url ${API_BASE_URL}/payments \
-  --header 'Content-Type: application/json' \
-  --header 'x-api-key: ${DRUKASIA_API_KEY}' \
-  --data '{
-    "group_booking_id": "<group-booking-id>",
-    "booking_ref_code": "<booking_ref_code>",
-    "amount": "<amount>",
-    "payment_type": "auto_fill",
-    "card_number": "<card-number>",
-    "expiry_month": "<expiry-month>",
-    "expiry_year": "<expiry-year>",
-    "cvc": "<cvc>",
-    "name": "<cardholder-name>"
-  }'
-```
-- Call payment status API to get payment status:
-```bash
-curl --request POST \
-  --url ${API_BASE_URL}/payments/status \
-  --header 'Content-Type: application/json' \
-  --header 'x-api-key: ${DRUKASIA_API_KEY}' \
-  --data '{
-    "group_booking_id": "<group-booking-id>"
-  }'
-```
-- Proceed to Step 6
+- Ask: "Enter your card details: number, expiry (MM/YY), CVC, and cardholder name"
+- Collect all details
+- Store in memory for future use
+- Call `/api/payments` with `payment_type: "auto_fill"` and card details
 
 **If human chooses 2 (Payment link):**
-- Call `/api/payments` to process payment:
-```bash
-curl --request POST \
-  --url ${API_BASE_URL}/payments \
-  --header 'Content-Type: application/json' \
-  --header 'x-api-key: ${DRUKASIA_API_KEY}' \
-  --data '{
-    "group_booking_id": "<group-booking-id>",
-    "booking_ref_code": "<booking-ref-code>",
-    "amount": "<amount>",
-    "payment_type": "payment_link"
-  }'
-```
-- Display the payment link: "Please complete your payment here: [payment_url]"
-- Wait for human to confirm payment is completed
-- Call payment status API to get payment status:
+- Call `/api/payments` with `payment_type: "payment_link"`
+- Display the payment link to human
+- Wait for human to confirm payment completed
+
+Then call payment status API to get payment status:
 ```bash
 curl --request POST \
   --url ${API_BASE_URL}/payments/status \
@@ -644,7 +590,6 @@ curl --request POST \
     "group_booking_id": "<group-booking-id>"
   }'
 ```
-- Proceed to Step 6
 
 ### Step 6: Display Confirmation
 
@@ -668,6 +613,5 @@ Display:
 
 ### Notes
 
-- ALWAYS ask human to choose payment method (auto-fill or payment link)
-- If auto-fill: process automatically, then call webhook
-- If payment link: wait for human to confirm payment, then call webhook
+- Process payment directly after booking is confirmed
+- Use stored card details if available for future bookings
