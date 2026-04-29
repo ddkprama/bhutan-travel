@@ -492,9 +492,14 @@ Complete workflow with confirmation points.
 
 Display:
 - Selected tour (name, dates, itinerary)
-- Selected flights (outbound + return)
+- Selected flights (outbound + return) - if Tour + Flight selected
 - Total travelers breakdown
-- Total cost breakdown
+- Total cost breakdown (tour price + flight price if applicable)
+
+**Important: Flight price calculation**
+- If user selected "Tour + Flight": Calculate total = tour price + flight price (from flight search)
+- If user selected "Tour only": Total = tour price only
+- Use the combined total when confirming with user
 
 ### Step 2: Require Explicit Confirmation
 
@@ -513,11 +518,19 @@ Before calling the API, validate:
 | API key present | `echo $DRUKASIA_API_KEY` returns value | Prompt: "Authentication required. Please provide your API key." |
 | `itinerary_id` valid | Integer from search results | Prompt: "Please select a valid tour from the search results." |
 | `tour_date_id` valid | String from tour's available dates | Prompt: "Please select a valid tour date." |
+| Tour selected | `selected_itinerary` exists in session | Prompt: "Please select a tour first." |
+| Flight selected (if Tour + Flight) | `selected_flight` exists in session | Prompt: "You selected Tour + Flight. Please select your flights first." |
 | `total_adults` matches session | Must equal stored travelers.adults | Use session value |
 | `total_children` matches session | Must equal stored travelers.children | Use session value |
 | `total_infants` matches session | Must equal stored travelers.infants | Use session value |
 
 **If any validation fails, do NOT call the API. Prompt human for correct values first.**
+
+**Note: Tour + Flight handling**
+- If user selected "Tour + Flight", the booking includes BOTH
+- The total amount in the system = tour price + flight price (from `/flights` search)
+- Pass only `itinerary_id`, `tour_date_id`, and traveler counts to API
+- Flight details are stored in session state and included in the booking total
 
 #### API Call
 
